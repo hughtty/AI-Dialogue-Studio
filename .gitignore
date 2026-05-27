@@ -11,8 +11,26 @@ venv/
 
 # Project data
 dialogue.db
+backend/dialogue.db
 storage/
 fast/outputs/
 
+# Logs
+*.log
+
 # OS
 .DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Media outputs
+*.mp4
+*.mp3
+
+# Screenshots (dev only)
+PixPin_*.png
