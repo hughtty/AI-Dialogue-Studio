@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dialogue Studio</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080808;--bg2:#111;--bg3:#181818;--bg4:#222;--bg5:#2a2a2a;
+  --bd:#252525;--bd2:#333;--bd3:#444;
+  --t:#e0e0e0;--t2:#888;--t3:#555;
+  --accent:#fff;
+  --green:#4ade80;--red:#f87171;--amber:#fbbf24;--blue:#60a5fa;--purple:#c084fc;
+  --r:8px;
+  --card-bg:#fff;--card-bd:#f0ede6;--card-t:#1a1a1a;--card-t2:#666;--card-t3:#aaa;
+  --bubble-ai-bg:#f5f4f0;--bubble-user-bg:#1a1a1a;--bubble-user-t:#f0f0f0;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f5f5f5;--bg2:#fff;--bg3:#f0f0f0;--bg4:#e8e8e8;--bg5:#e0e0e0;
+    --bd:#ddd;--bd2:#ccc;--bd3:#bbb;
+    --t:#1a1a1a;--t2:#555;--t3:#888;
+    --accent:#000;
+    --green:#16a34a;--red:#dc2626;--amber:#d97706;--blue:#2563eb;
+    --card-bg:#fff;--card-bd:#e5e5e5;--card-t:#1a1a1a;--card-t2:#555;--card-t3:#999;
+    --bubble-ai-bg:#f0f0f0;--bubble-user-bg:#1a1a1a;--bubble-user-t:#f0f0f0;
+  }
+}
+html,body{height:100%;background:var(--bg);color:var(--t);
+  font-family:'Noto Sans SC',sans-serif;font-size:14px;line-height:1.6;overflow:hidden}
+button{font-family:'Noto Sans SC',sans-serif;cursor:pointer}
+input,textarea,select{font-family:'Noto Sans SC',sans-serif}
+
+/* ── Shell ── */
+.shell{display:flex;flex-direction:column;height:100vh}
+.topbar{height:48px;background:var(--bg2);border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0}
+.logo{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.1em;
+  color:var(--t3);text-transform:uppercase}
+.page-title{font-size:14px;font-weight:500;color:var(--t2)}
+.topbar-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* ── Views ── */
+.view{flex:1;overflow:hidden;display:none}
+.view.active{display:flex;flex-direction:column}
+
+/* ── Buttons ── */
+.btn{padding:6px 14px;border-radius:var(--r);border:1px solid var(--bd2);
+  background:none;color:var(--t2);font-size:13px;transition:all .15s;
+  display:inline-flex;align-items:center;gap:6px}
+.btn:hover{color:var(--t);border-color:var(--t3)}
+.btn-primary{background:var(--t);color:var(--bg);border-color:var(--t)}
+.btn-primary:hover{background:#ccc;color:var(--bg)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-icon{padding:5px;border-radius:6px;width:28px;height:28px;
+  justify-content:center;font-size:15px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--bg4);border:1px solid var(--bd2);border-radius:var(--r);
+  padding:10px 18px;font-size:13px;color:var(--t);z-index:9999;
+  opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* ════════════════════════════════════════
+   PROJECT LIST VIEW
+════════════════════════════════════════ */
+#view-projects{padding:32px}
+.projects-header{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:24px}
+.projects-header h1{font-size:20px;font-weight:400}
+.projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:14px}
+.project-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);
+  padding:18px;cursor:pointer;transition:border-color .15s}
+.project-card:hover{border-color:var(--bd2)}
+.project-card-title{font-size:15px;font-weight:500;margin-bottom:6px}
+.project-card-meta{font-family:'DM Mono',monospace;font-size:11px;color:var(--t3);
+  display:flex;gap:12px}
+.status-badge{font-family:'DM Mono',monospace;font-size:10px;padding:2px 6px;
+  border-radius:4px;letter-spacing:.04em}
+.status-draft{background:#1a1a0d;color:var(--amber);border:1px solid rgba(251,191,36,.2)}
+.status-voicing{background:#0d1626;color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.status-done{background:#0d1f14;color:var(--green);border:1px solid rgba(74,222,128,.2)}
+.new-project-card{background:none;border:1px dashed var(--bd2);border-radius:var(--r);
+  padding:18px;cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  color:var(--t3);font-size:14px;min-height:90px}
+.new-project-card:hover{border-color:var(--t3);color:var(--t2)}
+
+/* ════════════════════════════════════════
+   STUDIO VIEW  (3-column)
+════════════════════════════════════════ */
+#view-studio{flex-direction:row!important}
+
+/* ── Studio left: script editor ── */
+.studio-left{width:400px;min-width:280px;max-width:600px;border-right:1px solid var(--bd);
+  display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.panel-head{padding:12px 16px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.panel-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;
+  color:var(--t3);text-transform:uppercase}
+
+/* Generate form */
+.gen-form{padding:14px 16px;border-bottom:1px solid var(--bd);flex-shrink:0;
+  display:flex;flex-direction:column;gap:8px}
+.form-row{display:flex;gap:8px}
+.form-input{flex:1;background:var(--bg3);border:1px solid var(--bd);border-radius:6px;
+  color:var(--t);font-size:13px;padding:7px 10px;outline:none;transition:border-color .15s}
+.form-input:focus{border-color:var(--bd2)}
+.form-select{background:var(--bg3);border:1px solid var(--bd);border-radius:6px;
+  color:var(--t2);font-size:12px;padding:6px 8px;outline:none;cursor:pointer}
+.form-select option{background:var(--bg3)}
+
+/* Script rows */
+.lines-wrap{flex:1;overflow-y:auto;padding:8px 0}
+.lines-wrap::-webkit-scrollbar{width:3px}
+.lines-wrap::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+.line-row{display:grid;grid-template-columns:90px 1fr auto 28px;gap:8px;
+  padding:10px 14px;border-bottom:1px solid var(--bd);align-items:start;
+  transition:background .1s}
+.line-row:hover{background:var(--bg2)}
+.line-row.audio-done .line-idx{color:var(--green)}
+.line-row.audio-generating .line-idx{color:var(--amber)}
+.line-row.audio-error .line-idx{color:#e57373}
+.line-duration{font-family:'DM Mono',monospace;font-size:9px;color:var(--t3);margin-top:2px}
+.line-error{font-size:10px;color:#e57373;margin-top:4px;line-height:1.4}
+.line-actions{display:flex;flex-direction:column;gap:4px;align-items:center;padding-top:2px}
+.line-act-btn{background:none;border:1px solid var(--bd);color:var(--t2);
+  border-radius:4px;width:24px;height:22px;font-size:11px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;padding:0;line-height:1}
+.line-act-btn:hover:not(:disabled){color:var(--t);border-color:var(--bd2)}
+.line-act-btn:disabled{opacity:.25;cursor:default}
+.voice-preview-btn{background:var(--bg);border:1px solid var(--bd);color:var(--t2);
+  border-radius:4px;font-size:11px;padding:3px 8px;margin-left:6px;cursor:pointer}
+.voice-preview-btn:hover:not(:disabled){color:var(--t);border-color:var(--bd2)}
+.voice-preview-btn:disabled{opacity:.4;cursor:default}
+.line-left{display:flex;flex-direction:column;gap:4px}
+.line-idx{font-family:'DM Mono',monospace;font-size:9px;color:var(--t3)}
+.speaker-sel{background:none;border:none;color:var(--t2);font-size:12px;
+  padding:2px 0;cursor:pointer;outline:none;width:100%}
+.speaker-sel option{background:var(--bg3);color:var(--t)}
+.emotion-sel{background:none;border:none;color:var(--t3);font-size:11px;
+  padding:1px 0;cursor:pointer;outline:none;width:100%}
+.emotion-sel option{background:var(--bg3);color:var(--t)}
+.role-sel{background:none;border:none;color:var(--t2);font-size:11px;
+  padding:1px 0;cursor:pointer;outline:none;width:100%}
+.role-sel option{background:var(--bg3);color:var(--t)}
+.line-text{background:none;border:none;color:var(--t);font-size:13px;
+  resize:none;outline:none;width:100%;min-height:36px;line-height:1.6;
+  padding:2px 0}
+.line-text::placeholder{color:var(--t3)}
+
+/* Add line footer */
+.lines-footer{padding:10px 14px;border-top:1px solid var(--bd);flex-shrink:0}
+
+/* ── Studio center: card preview ── */
+.studio-center{flex:1;display:flex;flex-direction:column;overflow:hidden;
+  border-right:1px solid var(--bd)}
+.card-preview-area{flex:1;overflow-y:auto;display:flex;flex-direction:column;
+  align-items:center;padding:28px 20px;gap:0}
+
+/* Story card */
+.story-card{width:100%;max-width:360px;background:var(--card-bg);border-radius:14px;
+  overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,.4)}
+.card-header{padding:11px 15px;border-bottom:1px solid var(--card-bd);
+  display:flex;align-items:center;justify-content:space-between;background:var(--card-bg)}
+.card-num-b{width:20px;height:20px;border-radius:50%;background:var(--bg4);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:500;color:var(--t2)}
+.card-app-n{font-size:11px;font-weight:500;color:var(--card-t3)}
+.card-date-t{font-size:10px;color:var(--card-t3)}
+.card-body{padding:14px;display:flex;flex-direction:column;gap:9px;background:var(--card-bg)}
+.bubble{max-width:84%;padding:8px 12px;border-radius:14px;font-size:13px;
+  line-height:1.6;color:var(--card-t)}
+.bubble-name{font-size:10px;font-weight:500;margin-bottom:2px}
+.bubble.ai{background:var(--bubble-ai-bg);align-self:flex-start;border-bottom-left-radius:3px}
+.bubble.ai .bubble-name{color:var(--card-t3)}
+.bubble.user{background:var(--bubble-user-bg);color:var(--bubble-user-t);align-self:flex-end;border-bottom-right-radius:3px}
+.bubble.user .bubble-name{color:var(--t3);text-align:right}
+.card-note-t{font-style:italic;font-size:11px;color:var(--card-t3);text-align:center;
+  padding:6px 14px 12px;border-top:1px solid var(--card-bd);background:var(--card-bg)}
+
+/* Nav */
+.card-nav{display:flex;align-items:center;justify-content:center;gap:12px;
+  padding:14px;flex-shrink:0}
+.nav-btn{background:var(--bg2);border:1px solid var(--bd);color:var(--t2);
+  border-radius:6px;padding:6px 14px;font-size:12px;transition:all .15s}
+.nav-btn:hover:not(:disabled){color:var(--t);border-color:var(--bd2)}
+.nav-btn:disabled{opacity:.3;cursor:default}
+.nav-dots{display:flex;gap:5px}
+.nav-dot{width:5px;height:5px;border-radius:50%;background:var(--bd2);
+  cursor:pointer;transition:background .15s}
+.nav-dot.active{background:var(--t2)}
+
+/* ── Resizer ── */
+.resizer{width:5px;background:transparent;cursor:col-resize;flex-shrink:0;
+  transition:background .15s;position:relative;z-index:10}
+.resizer:hover{background:var(--bg5)}
+.resizer.resizing{background:var(--bg5)}
+
+/* ── Screenshot Preview Panel ── */
+.ss-preview-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.ss-preview-panel{width:100%;max-width:960px;height:90vh;background:var(--bg2);border-radius:14px;
+  border:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.ss-preview-head{padding:12px 16px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ss-preview-body{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.ss-preview-controls{padding:12px 16px;border-bottom:1px solid var(--bd);
+  display:flex;flex-direction:column;gap:10px;flex-shrink:0;overflow-y:auto}
+.ss-preview-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ss-preview-label{font-size:11px;color:var(--t3);min-width:48px}
+.ss-preview-select{background:var(--bg3);border:1px solid var(--bd);border-radius:6px;
+  color:var(--t);font-size:12px;padding:5px 8px;outline:none;cursor:pointer}
+.ss-preview-select option{background:var(--bg3)}
+.ss-preview-frame-wrap{flex:1;display:flex;align-items:center;justify-content:center;
+  padding:16px;background:var(--bg);overflow:hidden;position:relative}
+.ss-preview-scale-wrap{transform-origin:center center;transition:transform .2s ease}
+.ss-preview-frame{border:none;background:#fff;border-radius:8px;
+  box-shadow:0 4px 20px rgba(0,0,0,.3);display:block}
+
+/* ── Studio right: voice + settings ── */
+.studio-right{width:280px;min-width:240px;display:flex;flex-direction:column;
+  overflow:hidden;flex-shrink:0}
+.voice-section{flex:1;overflow-y:auto;padding:14px}
+
+/* Voice preset panel */
+.preset-panel{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);
+  padding:12px;margin-bottom:10px}
+.preset-panel-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;
+  color:var(--t3);text-transform:uppercase;margin-bottom:8px}
+.preset-cat-sel{width:100%;background:var(--bg);border:1px solid var(--bd);
+  border-radius:6px;color:var(--t);font-size:12px;padding:5px 8px;outline:none;
+  margin-bottom:6px;cursor:pointer}
+.preset-cat-sel option{background:var(--bg3)}
+.preset-list{display:flex;flex-direction:column;gap:4px}
+.preset-item{padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12px;
+  color:var(--t2);border:1px solid transparent;transition:all .12s}
+.preset-item:hover{background:var(--bg4);color:var(--t)}
+.preset-item.active{background:var(--bg5);border-color:var(--bd3);color:var(--t)}
+.preset-item-name{font-weight:500}
+.preset-item-desc{font-size:10px;color:var(--t3);margin-top:1px}
+
+/* Voice card */
+.voice-card{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);
+  padding:12px;margin-bottom:10px}
+.voice-card-name{font-size:13px;font-weight:500;margin-bottom:8px}
+.voice-id-row{display:flex;gap:6px;align-items:center}
+.voice-id-input{flex:1;background:var(--bg);border:1px solid var(--bd);
+  border-radius:6px;color:var(--t2);font-family:'DM Mono',monospace;
+  font-size:11px;padding:5px 8px;outline:none}
+.voice-params{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px}
+.param-group{display:flex;flex-direction:column;gap:2px}
+.param-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--t3);
+  letter-spacing:.06em;text-transform:uppercase}
+.param-input{background:var(--bg);border:1px solid var(--bd);border-radius:4px;
+  color:var(--t);font-size:12px;padding:4px 6px;outline:none;text-align:center;width:100%}
+
+/* Action section */
+.action-section{border-top:1px solid var(--bd);padding:14px;flex-shrink:0;
+  display:flex;flex-direction:column;gap:8px}
+.progress-bar{height:2px;background:var(--bd);border-radius:1px;overflow:hidden}
+.progress-fill{height:100%;background:var(--t);transition:width .3s;width:0}
+.progress-text{font-family:'DM Mono',monospace;font-size:11px;color:var(--t3)}
+.action-row{display:flex;gap:8px}
+.export-row{display:flex;gap:6px;flex-wrap:wrap}
+.export-row .btn{flex:1;justify-content:center;font-size:11px;padding:5px 8px}
+.video-status{font-size:11px;color:var(--t3);padding:4px 0}
+
+/* Voice stats */
+.voice-stats{padding:10px 0;border-bottom:1px solid var(--bd);margin-bottom:10px}
+.voice-stats-row{display:flex;gap:10px;justify-content:center}
+.voice-stat{font-family:'DM Mono',monospace;font-size:11px;color:var(--t3);padding:3px 8px;border-radius:4px;background:var(--bg)}
+.voice-stat.done{color:var(--green)}
+.voice-stat.err{color:var(--red)}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* ── Overlay loading ── */
+.loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.loading-overlay.show{display:flex}
+.loading-spinner{width:32px;height:32px;border:2px solid var(--bd2);
+  border-top-color:var(--t);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:14px;color:var(--t2)}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- Topbar -->
+  <div class="topbar">
+    <span class="logo">Dialogue</span>
+    <span class="page-title" id="topbar-title">项目库</span>
+    <div class="topbar-right" id="topbar-actions">
+      <button class="btn btn-sm" onclick="showProjects()">← 返回项目库</button>
+    </div>
+  </div>
+
+  <!-- View: Projects -->
+  <div class="view active" id="view-projects">
+    <div class="projects-header">
+      <h1>项目库</h1>
+    </div>
+    <div class="projects-grid" id="projects-grid">
+      <div class="new-project-card" onclick="createProject()">
+        <span style="font-size:20px">+</span> 新建项目
+      </div>
+    </div>
+  </div>
+
+  <!-- View: Studio -->
+  <div class="view" id="view-studio">
+
+    <!-- Left: Script editor -->
+    <div class="studio-left" id="studio-left">
+      <div class="panel-head">
+        <span class="panel-label">脚本编辑器</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" onclick="toggleGenForm()" id="gen-toggle-btn">AI 生成</button>
+          <button class="btn btn-sm" onclick="importJSON()">导入 JSON</button>
+          <input id="json-file-input" type="file" accept=".json" style="display:none" onchange="handleJSONImport(event)">
+        </div>
+      </div>
+
+      <!-- AI Generate Form -->
+      <div class="gen-form" id="gen-form" style="display:none">
+        <input class="form-input" id="gen-theme" placeholder="故事主题（如：在外工作的人与父母）">
+        <div class="form-row">
+          <select class="form-select" id="gen-tone" style="flex:1" onchange="onToneChange()">
+            <option value="留白向">留白向</option>
+            <option value="温情向">温情向</option>
+            <option value="悲剧向">悲剧向</option>
+            <option value="悬疑向">悬疑向</option>
+            <option value="治愈向">治愈向</option>
+            <option value="讽刺向">讽刺向</option>
+            <option value="怀旧向">怀旧向</option>
+            <option value="custom">✏️ 自定义…</option>
+          </select>
+          <select class="form-select" id="gen-style" style="flex:1" onchange="onStyleChange()">
+            <option value="陪伴感">陪伴感</option>
+            <option value="工具感">工具感</option>
+            <option value="镜子感">镜子感</option>
+            <option value="审判感">审判感</option>
+            <option value="共谋感">共谋感</option>
+            <option value="旁观者">旁观者</option>
+            <option value="custom">✏️ 自定义…</option>
+          </select>
+        </div>
+        <input class="form-input" id="gen-tone-custom" placeholder="自定义基调（如：黑色幽默）" style="display:none">
+        <input class="form-input" id="gen-style-custom" placeholder="自定义AI形象（如：毒舌闺蜜）" style="display:none">
+        <input class="form-input" id="gen-characters" placeholder="主要角色（如：38岁工程师，在深圳工作）">
+        <button class="btn btn-primary" onclick="generateStory()" style="width:100%;justify-content:center">
+          生成故事
+        </button>
+      </div>
+
+      <div class="lines-wrap" id="lines-container"></div>
+
+      <div class="lines-footer">
+        <button class="btn" onclick="addLine()" style="width:100%;justify-content:center;font-size:12px">
+          + 添加台词
+        </button>
+      </div>
+    </div>
+    <div class="resizer" id="resizer-left"></div>
+
+    <!-- Center: Card preview -->
+    <div class="studio-center">
+      <div class="panel-head">
+        <span class="panel-label">图文卡片预览</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" onclick="openScreenshotPreview()">🖼 预览截图</button>
+          <button class="btn btn-sm" onclick="exportCards()">导出 JSON</button>
+        </div>
+      </div>
+      <div class="card-preview-area" id="card-preview-area">
+        <div style="color:var(--t3);font-size:13px;text-align:center;margin-top:60px">
+          在左侧编辑台词或生成故事<br>卡片预览将在此显示
+        </div>
+      </div>
+      <div class="card-nav" id="card-nav" style="display:none">
+        <button class="nav-btn" id="nav-prev" onclick="prevCard()">← 上一张</button>
+        <div class="nav-dots" id="nav-dots"></div>
+        <button class="nav-btn" id="nav-next" onclick="nextCard()">下一张 →</button>
+      </div>
+    </div>
+    <div class="resizer" id="resizer-right"></div>
+
+    <!-- Right: Voice & actions -->
+    <div class="studio-right" id="studio-right">
+      <div class="panel-head">
+        <span class="panel-label">音色配置</span>
+      </div>
+      <div class="voice-section" id="voice-section">
+        <div style="color:var(--t3);font-size:12px">
+          加载台词后，这里会显示各角色的音色配置。
+        </div>
+      </div>
+      <div class="action-section">
+        <!-- 配音状态概览 -->
+        <div class="voice-stats" id="voice-stats" style="display:none">
+          <div class="voice-stats-row">
+            <span class="voice-stat" id="stat-total">0 条台词</span>
+            <span class="voice-stat done" id="stat-done">0 完成</span>
+            <span class="voice-stat err" id="stat-fail">0 失败</span>
+          </div>
+        </div>
+
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="progress-text" id="progress-text" style="display:none"></div>
+
+        <!-- 主操作：生成配音 -->
+        <button class="btn btn-primary" onclick="generateAllVoice()" style="width:100%;justify-content:center" id="btn-voice">
+          🔊 生成配音
+        </button>
+
+        <!-- 次操作行 -->
+        <div class="action-row">
+          <button class="btn btn-sm" onclick="regenerateAllVoice()" style="flex:1;justify-content:center" id="btn-revoice" title="强制重新生成所有台词">
+            ↻ 全部重录
+          </button>
+          <button class="btn btn-sm" onclick="playAllAudio()" style="flex:1;justify-content:center" id="btn-playall" title="顺序播放所有已完成配音">
+            ▶ 试听全部
+          </button>
+          <button class="btn btn-sm" onclick="generateVideo()" style="flex:1;justify-content:center" id="btn-video">
+            🎬 合成视频
+          </button>
+        </div>
+
+        <!-- 导出行 -->
+        <div class="export-row">
+          <button class="btn" onclick="exportScript()" id="btn-export-script">📄 脚本</button>
+          <button class="btn" onclick="exportScreenshotCurrent()" id="btn-ss-current" title="生成当前卡片截图">📄 本页截图</button>
+          <button class="btn" onclick="exportScreenshotAll()" id="btn-ss-all" title="生成所有卡片截图">🖼 全部截图</button>
+          <button class="btn" onclick="clearProjectCache()" id="btn-clear-cache" title="清理 composition、视频缓存和旧试听文件">🧹 清理</button>
+        </div>
+
+        <div class="video-status" id="video-status" style="display:none"></div>
+        <a id="download-link" style="display:none" class="btn btn-primary"
+           style="justify-content:center;text-align:center;text-decoration:none">
+          下载 MP4
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">生成中...</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────
+const API = '';  // same origin
+let currentProjectId = null;
+let lines = [];           // [{id, speaker, text_raw, text_clean, emotion, audio_status, ...}]
+let slides = [];          // 分组后的卡片数据
+let currentCard = 0;
+let voices = {};          // { speaker: { voice_id, speed, vol, pitch } }
+let videoJobId = null;
+
+const SPEAKERS = ['助理','陈绍明','旁白'];
+
+// ── Voice Presets (from fast/voice_library.yml) ───────────────
+const VOICE_PRESETS = {
+  ai_assistant: {
+    label: 'AI 助理',
+    voices: [
+      { id: 'Chinese (Mandarin)_Warm_Girl', name: '温暖少女', desc: '温暖、克制、有陪伴感' },
+      { id: 'Chinese (Mandarin)_Gentle_Youth', name: '温润青年', desc: '温润、理性、不打扰' },
+      { id: 'Chinese (Mandarin)_Crisp_Girl', name: '清脆少女', desc: '清脆、精准、略带疏离感' },
+      { id: 'Robot_Armor', name: '机械战甲', desc: '明显的机械质感' },
+    ]
+  },
+  middle_aged_man: {
+    label: '中年男性',
+    voices: [
+      { id: 'Chinese (Mandarin)_Sincere_Adult', name: '真诚青年', desc: '真诚、略带疲惫' },
+      { id: 'Chinese (Mandarin)_Gentleman', name: '温润男声', desc: '温润、成熟、有故事感' },
+      { id: 'Chinese (Mandarin)_Radio_Host', name: '电台男主播', desc: '低沉、有磁性、深夜感' },
+      { id: 'Chinese (Mandarin)_Lyrical_Voice', name: '抒情男声', desc: '抒情、内敛、情绪丰富' },
+    ]
+  },
+  middle_aged_woman: {
+    label: '中年女性',
+    voices: [
+      { id: 'Chinese (Mandarin)_Wise_Women', name: '阅历姐姐', desc: '成熟、有阅历、淡然' },
+      { id: 'Chinese (Mandarin)_Soft_Girl', name: '柔和少女', desc: '柔和、安静、不张扬' },
+    ]
+  },
+  youth: {
+    label: '青年',
+    voices: [
+      { id: 'Chinese (Mandarin)_Pure-hearted_Boy', name: '清澈邻家弟弟', desc: '清澈、年轻' },
+      { id: 'chunzhen_xuedi', name: '纯真学弟', desc: '纯真、青涩、学生气' },
+      { id: 'junlang_nanyou', name: '俊朗男友', desc: '俊朗、阳光、有男友感' },
+      { id: 'Chinese (Mandarin)_Warm_Girl', name: '温暖少女', desc: '温暖、治愈、年轻' },
+    ]
+  },
+  elder: {
+    label: '老年',
+    voices: [
+      { id: 'Chinese (Mandarin)_Kind-hearted_Elder', name: '花甲奶奶', desc: '慈祥、年迈、有岁月感' },
+      { id: 'Chinese (Mandarin)_Humorous_Elder', name: '搞笑大爷', desc: '幽默、爽朗、市井气' },
+    ]
+  },
+  special: {
+    label: '特殊',
+    voices: [
+      { id: 'Chinese (Mandarin)_Unrestrained_Young_Man', name: '不羁青年', desc: '不羁、叛逆、有锋芒' },
+      { id: 'Chinese (Mandarin)_HK_Flight_Attendant', name: '港普空姐', desc: '港普口音、职业感' },
+    ]
+  },
+};
+
+const EMOTIONS = [
+  { value: '', label: '默认', desc: '跟随角色默认情感' },
+  { value: 'calm', label: '平静', desc: '中性/日常' },
+  { value: 'happy', label: '高兴', desc: '轻松、愉悦' },
+  { value: 'sad', label: '悲伤', desc: '低落、疲惫' },
+  { value: 'angry', label: '愤怒', desc: '不满、激动' },
+  { value: 'fearful', label: '害怕', desc: '担忧、恐惧' },
+  { value: 'disgusted', label: '厌恶', desc: '嫌弃、反感' },
+  { value: 'surprised', label: '惊讶', desc: '意外、震惊' },
+];
+
+// ── Utils ─────────────────────────────────────────────────────
+function escapeHtml(s) {
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function formatDuration(ms) {
+  if (!ms) return '';
+  const s = ms / 1000;
+  if (s < 60) return s.toFixed(1) + 's';
+  const m = Math.floor(s/60), r = Math.round(s%60);
+  return `${m}:${String(r).padStart(2,'0')}`;
+}
+
+let _audioEl = null;
+function playUrl(url) {
+  if (_audioEl) { _audioEl.pause(); _audioEl = null; }
+  _audioEl = new Audio(url);
+  _audioEl.play().catch(e => toast('播放失败：' + e.message));
+}
+
+function toast(msg, duration=2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function loading(show, text='处理中...') {
+  const el = document.getElementById('loading-overlay');
+  document.getElementById('loading-text').textContent = text;
+  el.classList.toggle('show', show);
+}
+
+async function api(method, path, body) {
+  const opts = { method, headers: {'Content-Type':'application/json; charset=utf-8'} };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({detail: res.statusText}));
+    throw new Error(err.detail || res.statusText);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+// ── Projects view ─────────────────────────────────────────────
+async function loadProjects() {
+  const projects = await api('GET', '/api/projects');
+  const grid = document.getElementById('projects-grid');
+  grid.innerHTML = `<div class="new-project-card" onclick="createProject()">
+    <span style="font-size:20px">+</span> 新建项目
+  </div>`;
+  projects.forEach(p => {
+    const statusClass = {draft:'status-draft',voicing:'status-voicing',done:'status-done',video_pending:'status-voicing'}[p.status]||'status-draft';
+    const statusText = {draft:'草稿',voicing:'配音中',done:'已完成',video_pending:'视频合成中'}[p.status]||'草稿';
+    const div = document.createElement('div');
+    div.className = 'project-card';
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div class="project-card-title">${escapeHtml(p.title)}</div>
+        <span class="status-badge ${statusClass}">${statusText}</span>
+      </div>
+      <div class="project-card-meta" style="margin-top:8px">
+        <span>${p.line_count} 行台词</span>
+        <span>${p.updated_at.slice(0,10)}</span>
+      </div>`;
+    div.onclick = () => openProject(p.id);
+    grid.insertBefore(div, grid.firstChild);
+  });
+}
+
+async function createProject() {
+  const title = (prompt('项目名称：', '未命名项目') || '').trim();
+  if (!title) return;
+  loading(true, '创建项目...');
+  try {
+    const p = await api('POST', '/api/projects', { title });
+    await openProject(p.id);
+  } catch(e) { toast('创建失败：' + e.message); }
+  loading(false);
+}
+
+function showProjects() {
+  document.getElementById('view-projects').classList.add('active');
+  document.getElementById('view-studio').classList.remove('active');
+  document.getElementById('topbar-title').textContent = '项目库';
+  document.getElementById('topbar-actions').style.display = 'none';
+  document.getElementById('download-link').style.display = 'none';
+  document.getElementById('video-status').style.display = 'none';
+  currentProjectId = null;
+  videoJobId = null;
+  loadProjects();
+}
+
+async function openProject(id) {
+  loading(true, '加载项目...');
+  try {
+    const data = await api('GET', `/api/projects/${id}`);
+    currentProjectId = id;
+    lines = data.lines || [];
+    voices = data.voices || {};
+
+    document.getElementById('view-projects').classList.remove('active');
+    document.getElementById('view-studio').classList.add('active');
+    document.getElementById('topbar-title').textContent = data.title;
+    document.getElementById('topbar-actions').style.display = '';
+    document.getElementById('download-link').style.display = 'none';
+    document.getElementById('video-status').style.display = 'none';
+    videoJobId = null;
+
+    renderLines();
+    buildSlides();
+    renderCardPreview();
+    renderVoiceSection();
+    renderVoiceStats();
+  } catch(e) { toast('加载失败：' + e.message); }
+  loading(false);
+}
+
+// ── Lines editor ──────────────────────────────────────────────
+function renderLines() {
+  const c = document.getElementById('lines-container');
+  if (!lines.length) {
+    c.innerHTML = '<div style="padding:20px;text-align:center;color:var(--t3);font-size:12px">暂无台词，点击「AI 生成」或「添加台词」开始</div>';
+    return;
+  }
+  c.innerHTML = lines.map((l, i) => {
+    const cls = l.audio_status==='done'?'audio-done'
+              : l.audio_status==='generating'?'audio-generating'
+              : l.audio_status==='error'?'audio-error':'';
+    const statusGlyph = l.audio_status==='done'?'✓'
+              : l.audio_status==='generating'?'…'
+              : l.audio_status==='error'?'!':'○';
+    const dur = l.duration_ms ? `<span class="line-duration">${formatDuration(l.duration_ms)}</span>` : '';
+    const canPlay = l.audio_status==='done';
+    const canRedo = l.audio_status==='done' || l.audio_status==='error';
+    const errBlock = l.audio_status==='error' && l.error_msg
+      ? `<div class="line-error">⚠ ${escapeHtml(l.error_msg)}</div>` : '';
+    const emotionOptions = EMOTIONS.map(e =>
+      `<option value="${e.value}" ${l.emotion===e.value?'selected':''}>${e.label}</option>`
+    ).join('');
+    return `
+    <div class="line-row ${cls}" data-id="${l.id}">
+      <div class="line-left">
+        <span class="line-idx">${String(i+1).padStart(2,'0')} · ${statusGlyph}</span>
+        <select class="speaker-sel" onchange="updateLine('${l.id}','speaker',this.value)">
+          ${[...new Set([...SPEAKERS, l.speaker])].map(s =>
+            `<option value="${escapeHtml(s)}" ${l.speaker===s?'selected':''}>${escapeHtml(s)}</option>`
+          ).join('')}
+        </select>
+        <select class="role-sel" title="角色类型" onchange="updateLine('${l.id}','role',this.value)">
+          <option value="ai" ${l.role==='ai'?'selected':''}>🤖 AI</option>
+          <option value="user" ${l.role==='user'?'selected':''}>👤 用户</option>
+        </select>
+        <select class="emotion-sel" title="情感"
+          onchange="updateLine('${l.id}','emotion',this.value||null)">
+          ${emotionOptions}
+        </select>
+        ${dur}
+      </div>
+      <div>
+        <textarea class="line-text" rows="2"
+          onchange="updateLine('${l.id}','text_raw',this.value)"
+          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+        >${escapeHtml(l.text_raw)}</textarea>
+        ${errBlock}
+      </div>
+      <div class="line-actions">
+        <button class="line-act-btn" title="试听" ${canPlay?'':'disabled'}
+          onclick="playLineAudio('${l.id}')">▶</button>
+        <button class="line-act-btn" title="${canRedo?'重新生成':'生成配音'}"
+          onclick="ttsOneLine('${l.id}')">${l.audio_status==='generating'?'…':'↻'}</button>
+      </div>
+      <button class="btn btn-icon" onclick="deleteLine('${l.id}')"
+        style="color:var(--t3);border-color:transparent;font-size:16px;margin-top:2px">×</button>
+    </div>`;
+  }).join('');
+  // auto-resize textareas
+  c.querySelectorAll('.line-text').forEach(ta => {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  });
+}
+
+// 同步某 speaker 的所有 role（首次设置后自动跟随）
+async function syncRoleForSpeaker(changedLine) {
+  const speaker = changedLine.speaker;
+  const newRole = changedLine.role;
+  const targets = lines.filter(l => l.id !== changedLine.id && l.speaker === speaker && l.role !== newRole);
+  if (!targets.length) return;
+  for (const l of targets) {
+    l.role = newRole;
+    try {
+      await api('PATCH', `/api/projects/${currentProjectId}/lines/${l.id}`, { role: newRole });
+    } catch(e) { /* ignore individual failures */ }
+  }
+}
+
+async function updateLine(id, key, value) {
+  const line = lines.find(l => l.id === id);
+  if (!line) return;
+  line[key] = value;
+  if (key === 'text_raw') {
+    let clean = value.replace(/<#[\d.]+#>/g,'');
+    clean = clean.replace(/[\[(](?:breath|sighs|laughs|chuckles|gasps|inhales|exhales|emm|coughs|clear-throat|groans|pant|sniffs|snorts|burps|lip-smacking|humming|hissing|sneezes)[\])]/gi,'');
+    clean = clean.replace(/  +/g,' ').trim();
+    line.text_clean = clean;
+  }
+  try {
+    await api('PATCH', `/api/projects/${currentProjectId}/lines/${id}`, { [key]: value });
+    if (key === 'role') await syncRoleForSpeaker(line);
+    buildSlides();
+    renderLines();
+    renderCardPreview();
+    if (key === 'speaker' || key === 'role') renderVoiceSection();
+  } catch(e) { toast('保存失败'); }
+}
+
+async function addLine() {
+  loading(true, '添加台词...');
+  try {
+    const line = await api('POST', `/api/projects/${currentProjectId}/lines`, {
+      speaker: SPEAKERS[0], role: 'ai', text_raw: '', index: lines.length
+    });
+    lines.push(line);
+    renderLines();
+    buildSlides();
+    renderCardPreview();
+    renderVoiceSection();
+  } catch(e) { toast('添加失败：' + e.message); }
+  loading(false);
+}
+
+async function deleteLine(id) {
+  if (!confirm('删除这条台词？')) return;
+  await api('DELETE', `/api/projects/${currentProjectId}/lines/${id}`);
+  lines = lines.filter(l => l.id !== id);
+  renderLines();
+  buildSlides();
+  renderCardPreview();
+}
+
+// ── Generate form ─────────────────────────────────────────────
+function toggleGenForm() {
+  const f = document.getElementById('gen-form');
+  const btn = document.getElementById('gen-toggle-btn');
+  const show = f.style.display === 'none';
+  f.style.display = show ? 'flex' : 'none';
+  btn.textContent = show ? '收起' : 'AI 生成';
+}
+
+function onToneChange() {
+  const sel = document.getElementById('gen-tone');
+  const custom = document.getElementById('gen-tone-custom');
+  custom.style.display = sel.value === 'custom' ? 'block' : 'none';
+}
+
+function onStyleChange() {
+  const sel = document.getElementById('gen-style');
+  const custom = document.getElementById('gen-style-custom');
+  custom.style.display = sel.value === 'custom' ? 'block' : 'none';
+}
+
+function _getTone() {
+  const sel = document.getElementById('gen-tone');
+  if (sel.value !== 'custom') return sel.value;
+  return document.getElementById('gen-tone-custom').value.trim() || '留白向';
+}
+
+function _getStyle() {
+  const sel = document.getElementById('gen-style');
+  if (sel.value !== 'custom') return sel.value;
+  return document.getElementById('gen-style-custom').value.trim() || '陪伴感';
+}
+
+async function generateStory() {
+  const theme = document.getElementById('gen-theme').value.trim();
+  if (!theme) { toast('请输入故事主题'); return; }
+  loading(true, 'Kimi K2.6 生成故事中...');
+  try {
+    const res = await api('POST', '/api/story/generate', {
+      project_id: currentProjectId,
+      theme,
+      tone: _getTone(),
+      ai_style: _getStyle(),
+      characters: document.getElementById('gen-characters').value || '主角',
+    });
+    // 重新加载项目
+    const data = await api('GET', `/api/projects/${currentProjectId}`);
+    lines = data.lines || [];
+    document.getElementById('topbar-title').textContent = data.title;
+    renderLines();
+    buildSlides();
+    renderCardPreview();
+    renderVoiceSection();
+    document.getElementById('gen-form').style.display = 'none';
+    document.getElementById('gen-toggle-btn').textContent = 'AI 生成';
+    toast('故事生成完成！');
+  } catch(e) { toast('生成失败：' + e.message); }
+  loading(false);
+}
+
+// ── JSON import ───────────────────────────────────────────────
+function importJSON() { document.getElementById('json-file-input').click(); }
+
+async function handleJSONImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  let json;
+  try { json = JSON.parse(text); } catch { toast('JSON 格式错误'); return; }
+  loading(true, '导入故事...');
+  try {
+    await api('POST', '/api/story/import', { project_id: currentProjectId, story_json: json });
+    const data = await api('GET', `/api/projects/${currentProjectId}`);
+    lines = data.lines || [];
+    document.getElementById('topbar-title').textContent = data.title;
+    renderLines(); buildSlides(); renderCardPreview(); renderVoiceSection();
+    toast('导入成功');
+  } catch(e) { toast('导入失败：' + e.message); }
+  loading(false);
+  e.target.value = '';
+}
+
+// ── Card preview ──────────────────────────────────────────────
+function buildSlides() {
+  if (!lines.length) { slides = []; return; }
+  // 优先使用原始 slide 分组（通过 slide_num 或每6行 fallback）
+  const hasSlideNum = lines.some(l => l.slide_num != null);
+  if (hasSlideNum) {
+    const groups = {};
+    lines.forEach(l => {
+      const sn = l.slide_num || 0;
+      if (!groups[sn]) groups[sn] = [];
+      groups[sn].push(l);
+    });
+    slides = Object.keys(groups).sort((a,b)=>+a-+b).map(k => groups[k]);
+  } else {
+    const chunkSize = 5;
+    slides = [];
+    for (let i = 0; i < lines.length; i += chunkSize) {
+      slides.push(lines.slice(i, i + chunkSize));
+    }
+  }
+  if (currentCard >= slides.length) currentCard = Math.max(0, slides.length - 1);
+}
+
+function renderCardPreview() {
+  const area = document.getElementById('card-preview-area');
+  const nav  = document.getElementById('card-nav');
+
+  if (!slides.length) {
+    area.innerHTML = '<div style="color:var(--t3);font-size:13px;text-align:center;margin-top:60px">在左侧编辑台词或生成故事<br>卡片预览将在此显示</div>';
+    nav.style.display = 'none';
+    return;
+  }
+
+  nav.style.display = 'flex';
+  const slide = slides[currentCard];
+  const messagesHtml = slide.map(l => {
+    const isAi = l.role === 'ai';
+    let displayText = l.text_clean || l.text_raw;
+    // 前端二次清理：隐藏语气词提示
+    displayText = displayText.replace(/[\[(](?:breath|sighs|laughs|chuckles|gasps|inhales|exhales|emm|coughs|clear-throat|groans|pant|sniffs|snorts|burps|lip-smacking|humming|hissing|sneezes)[\])]/gi,'');
+    displayText = displayText.replace(/  +/g,' ').trim();
+    return `<div class="bubble ${isAi?'ai':'user'}">
+      <div class="bubble-name">${escapeHtml(l.speaker)}</div>
+      ${escHtml(displayText)}
+    </div>`;
+  }).join('');
+
+  area.innerHTML = `
+    <div class="story-card">
+      <div class="card-header">
+        <div style="display:flex;align-items:center;gap:7px">
+          <div class="card-num-b">${currentCard+1}</div>
+          <span class="card-app-n">助理 · 对话记录</span>
+        </div>
+        <span class="card-date-t">第 ${currentCard+1} 张 / 共 ${slides.length} 张</span>
+      </div>
+      <div class="card-body">${messagesHtml}</div>
+    </div>`;
+
+  // dots
+  document.getElementById('nav-dots').innerHTML = slides.map((_,i) =>
+    `<div class="nav-dot${i===currentCard?' active':''}" onclick="goCard(${i})"></div>`
+  ).join('');
+  document.getElementById('nav-prev').disabled = currentCard === 0;
+  document.getElementById('nav-next').disabled = currentCard === slides.length - 1;
+}
+
+function prevCard() { if (currentCard > 0) { currentCard--; renderCardPreview(); } }
+function nextCard() { if (currentCard < slides.length-1) { currentCard++; renderCardPreview(); } }
+function goCard(i) { currentCard = i; renderCardPreview(); }
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function exportCards() {
+  if (!lines.length) { toast('没有台词可以导出'); return; }
+  const json = {
+    title: document.getElementById('topbar-title').textContent,
+    slides: slides.map((slide, i) => ({
+      num: i+1,
+      messages: slide.map(l => ({
+        role: l.role,
+        name: l.speaker,
+        text: l.text_raw,
+        emotion: l.emotion,
+      }))
+    }))
+  };
+  const blob = new Blob([JSON.stringify(json, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${document.getElementById('topbar-title').textContent}.json`;
+  a.click();
+}
+
+// ── Voice section ─────────────────────────────────────────────
+function renderVoiceSection() {
+  const speakers = [...new Set(lines.map(l => l.speaker))];
+  const sec = document.getElementById('voice-section');
+  if (!speakers.length) {
+    sec.innerHTML = '<div style="color:var(--t3);font-size:12px">加载台词后显示角色音色配置。</div>';
+    return;
+  }
+
+  // 预设面板（每个 speaker 一个）
+  let html = '';
+  speakers.forEach(spk => {
+    const v = voices[spk] || { voice_id: '', speed: 0.95, vol: 1, pitch: 0 };
+    html += `
+    <div class="preset-panel" data-speaker="${spk}">
+      <div class="preset-panel-label">${spk} — 音色预设</div>
+      <select class="preset-cat-sel" onchange="renderPresetsForSpeaker('${spk}', this.value)">
+        <option value="">选择分类...</option>
+        ${Object.entries(VOICE_PRESETS).map(([key, cat]) =>
+          `<option value="${key}">${cat.label}</option>`
+        ).join('')}
+      </select>
+      <div class="preset-list" id="preset-list-${spk}"></div>
+    </div>
+    <div class="voice-card">
+      <div class="voice-card-name">${spk}</div>
+      <div class="voice-id-row">
+        <input class="voice-id-input" placeholder="voice_id"
+          value="${escapeHtml(v.voice_id||'')}" id="voice-id-${spk}"
+          onchange="updateVoice('${spk}','voice_id',this.value)">
+        <button class="voice-preview-btn" data-preview="${spk}"
+          onclick="previewVoice('${spk}')">试听</button>
+      </div>
+      <div class="voice-params">
+        <div class="param-group">
+          <span class="param-label">语速</span>
+          <input class="param-input" type="number" step="0.1" min="0.5" max="2"
+            value="${v.speed||0.95}"
+            onchange="updateVoice('${spk}','speed',+this.value)">
+        </div>
+        <div class="param-group">
+          <span class="param-label">音量</span>
+          <input class="param-input" type="number" step="0.1" min="0.1" max="10"
+            value="${v.vol||1}"
+            onchange="updateVoice('${spk}','vol',+this.value)">
+        </div>
+        <div class="param-group">
+          <span class="param-label">声调</span>
+          <input class="param-input" type="number" step="1" min="-12" max="12"
+            value="${v.pitch||0}"
+            onchange="updateVoice('${spk}','pitch',+this.value)">
+        </div>
+      </div>
+    </div>`;
+  });
+  sec.innerHTML = html;
+
+  // 恢复已选中的预设高亮
+  speakers.forEach(spk => {
+    const v = voices[spk];
+    if (v?.voice_id) {
+      // 查找并高亮对应的预设
+      for (const [catKey, cat] of Object.entries(VOICE_PRESETS)) {
+        const preset = cat.voices.find(p => p.id === v.voice_id);
+        if (preset) {
+          const sel = sec.querySelector(`.preset-panel[data-speaker="${spk}"] .preset-cat-sel`);
+          if (sel) {
+            sel.value = catKey;
+            renderPresetsForSpeaker(spk, catKey, v.voice_id);
+          }
+          break;
+        }
+      }
+    }
+  });
+}
+
+function renderPresetsForSpeaker(speaker, catKey, activeId) {
+  const list = document.getElementById(`preset-list-${speaker}`);
+  if (!list) return;
+  if (!catKey) { list.innerHTML = ''; return; }
+  const cat = VOICE_PRESETS[catKey];
+  if (!cat) return;
+  list.innerHTML = cat.voices.map(v => `
+    <div class="preset-item ${activeId === v.id ? 'active' : ''}"
+      onclick="applyPreset('${speaker}', '${v.id}')">
+      <div class="preset-item-name">${v.name}</div>
+      <div class="preset-item-desc">${v.desc}</div>
+    </div>
+  `).join('');
+}
+
+function applyPreset(speaker, voice_id) {
+  if (!voices[speaker]) voices[speaker] = { voice_id:'', speed:0.95, vol:1, pitch:0 };
+  voices[speaker].voice_id = voice_id;
+  // 更新输入框
+  const input = document.getElementById(`voice-id-${speaker}`);
+  if (input) input.value = voice_id;
+  // 更新预设列表高亮
+  const panel = document.querySelector(`.preset-panel[data-speaker="${speaker}"]`);
+  if (panel) {
+    const sel = panel.querySelector('.preset-cat-sel');
+    if (sel && sel.value) {
+      renderPresetsForSpeaker(speaker, sel.value, voice_id);
+    }
+  }
+  updateVoice(speaker, 'voice_id', voice_id);
+}
+
+async function updateVoice(speaker, key, value) {
+  if (!voices[speaker]) voices[speaker] = { voice_id:'', speed:0.95, vol:1, pitch:0 };
+  voices[speaker][key] = value;
+  try {
+    await api('PATCH', `/api/projects/${currentProjectId}`, { voices });
+  } catch(e) { toast('音色保存失败'); }
+}
+
+// ── Voice generation ──────────────────────────────────────────
+function playLineAudio(lineId) {
+  const l = lines.find(x => x.id === lineId);
+  if (!l || l.audio_status !== 'done') return;
+  playUrl(`/storage/${currentProjectId}/audio/${lineId}.mp3?t=${Date.now()}`);
+}
+
+async function ttsOneLine(lineId) {
+  const l = lines.find(x => x.id === lineId);
+  if (!l) return;
+  const v = voices[l.speaker];
+  if (!v?.voice_id) { toast(`请先为「${l.speaker}」配置 voice_id`); return; }
+  l.audio_status = 'generating';
+  renderLines();
+  try {
+    const res = await api('POST', `/api/tts/lines/${lineId}`);
+    Object.assign(l, res);
+    renderLines();
+    toast('配音完成');
+  } catch (e) {
+    l.audio_status = 'error';
+    l.error_msg = e.message;
+    renderLines();
+    toast('配音失败：' + e.message);
+  }
+}
+
+let _batchSSE = null;
+async function generateAllVoice() {
+  const speakers = [...new Set(lines.map(l => l.speaker))];
+  const missing = speakers.filter(s => !voices[s]?.voice_id);
+  if (missing.length) { toast('未配置 voice_id：' + missing.join('、')); return; }
+  if (_batchSSE) { toast('批量配音正在进行中'); return; }
+
+  const btn = document.getElementById('btn-voice');
+  const fill = document.getElementById('progress-fill');
+  const txt = document.getElementById('progress-text');
+  btn.disabled = true;
+  txt.style.display = '';
+  txt.textContent = '准备中...';
+  fill.style.width = '0%';
+
+  let total = 0, done = 0, ok = 0, failed = 0;
+  try {
+    const resp = await fetch(`/api/tts/projects/${currentProjectId}/batch`, { method:'POST' });
+    if (!resp.ok || !resp.body) {
+      const err = await resp.json().catch(()=>({detail:resp.statusText}));
+      throw new Error(err.detail || resp.statusText);
+    }
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { value, done: rdone } = await reader.read();
+      if (rdone) break;
+      buf += dec.decode(value, { stream:true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop();
+      for (const block of parts) {
+        const m = block.match(/^data:\s*(.+)$/m);
+        if (!m) continue;
+        const evt = JSON.parse(m[1]);
+        if (evt.type === 'start') {
+          total = evt.total;
+          txt.textContent = total === 0 ? '没有需要生成的台词' : `0 / ${total}`;
+        } else if (evt.type === 'progress') {
+          const l = lines.find(x => x.id === evt.line_id);
+          if (l) {
+            l.audio_status = evt.status;
+            if (evt.status === 'done') {
+              l.duration_ms = evt.duration_ms;
+              l.error_msg = null;
+            } else if (evt.status === 'error') {
+              l.error_msg = evt.error;
+            }
+          }
+          if (evt.status === 'done') { done++; ok++; }
+          else if (evt.status === 'error') { done++; failed++; }
+          if (total) {
+            fill.style.width = (done/total*100) + '%';
+            txt.textContent = `${done} / ${total} · ${evt.speaker} ${evt.status==='done'?'✓':evt.status==='error'?'✗':'…'}`;
+          }
+          renderLines();
+        } else if (evt.type === 'error') {
+          throw new Error(evt.message);
+        } else if (evt.type === 'done') {
+          txt.textContent = `完成：成功 ${evt.ok} / 失败 ${evt.failed}`;
+          fill.style.width = '100%';
+        }
+      }
+    }
+    renderVoiceStats();
+    toast(failed ? `完成（${failed} 条失败）` : `配音完成（${ok} 条）`);
+  } catch (e) {
+    toast('批量配音失败：' + e.message);
+    txt.textContent = '失败：' + e.message;
+  } finally {
+    _batchSSE = null;
+    btn.disabled = false;
+    renderVoiceStats();
+  }
+}
+
+// ── 配音状态概览 ──────────────────────────────────────────────
+function renderVoiceStats() {
+  const el = document.getElementById('voice-stats');
+  if (!lines.length) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  const total = lines.length;
+  const done = lines.filter(l => l.audio_status === 'done').length;
+  const fail = lines.filter(l => l.audio_status === 'error').length;
+  document.getElementById('stat-total').textContent = `${total} 条台词`;
+  document.getElementById('stat-done').textContent = `${done} 完成`;
+  document.getElementById('stat-fail').textContent = `${fail} 失败`;
+}
+
+// ── 全部重录 ──────────────────────────────────────────────────
+async function regenerateAllVoice() {
+  const speakers = [...new Set(lines.map(l => l.speaker))];
+  const missing = speakers.filter(s => !voices[s]?.voice_id);
+  if (missing.length) { toast('未配置 voice_id：' + missing.join('、')); return; }
+  if (_batchSSE) { toast('批量配音正在进行中'); return; }
+  if (!confirm('确定要重新生成所有台词的配音吗？这会覆盖现有音频。')) return;
+
+  const btn = document.getElementById('btn-revoice');
+  const fill = document.getElementById('progress-fill');
+  const txt = document.getElementById('progress-text');
+  btn.disabled = true;
+  txt.style.display = '';
+  txt.textContent = '准备重录...';
+  fill.style.width = '0%';
+
+  let total = 0, done = 0, ok = 0, failed = 0;
+  try {
+    const resp = await fetch(`/api/tts/projects/${currentProjectId}/batch?force=true`, { method:'POST' });
+    if (!resp.ok || !resp.body) {
+      const err = await resp.json().catch(()=>({detail:resp.statusText}));
+      throw new Error(err.detail || resp.statusText);
+    }
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { value, done: rdone } = await reader.read();
+      if (rdone) break;
+      buf += dec.decode(value, { stream:true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop();
+      for (const block of parts) {
+        const m = block.match(/^data:\s*(.+)$/m);
+        if (!m) continue;
+        const evt = JSON.parse(m[1]);
+        if (evt.type === 'start') {
+          total = evt.total;
+          txt.textContent = total === 0 ? '没有需要生成的台词' : `0 / ${total}`;
+        } else if (evt.type === 'progress') {
+          const l = lines.find(x => x.id === evt.line_id);
+          if (l) {
+            l.audio_status = evt.status;
+            if (evt.status === 'done') {
+              l.duration_ms = evt.duration_ms;
+              l.error_msg = null;
+            } else if (evt.status === 'error') {
+              l.error_msg = evt.error;
+            }
+          }
+          if (evt.status === 'done') { done++; ok++; }
+          else if (evt.status === 'error') { done++; failed++; }
+          if (total) {
+            fill.style.width = (done/total*100) + '%';
+            txt.textContent = `${done} / ${total} · ${evt.speaker} ${evt.status==='done'?'✓':evt.status==='error'?'✗':'…'}`;
+          }
+          renderLines();
+        } else if (evt.type === 'error') {
+          throw new Error(evt.message);
+        } else if (evt.type === 'done') {
+          txt.textContent = `完成：成功 ${evt.ok} / 失败 ${evt.failed}`;
+          fill.style.width = '100%';
+        }
+      }
+    }
+    renderVoiceStats();
+    toast(failed ? `重录完成（${failed} 条失败）` : `重录完成（${ok} 条）`);
+  } catch (e) {
+    toast('批量重录失败：' + e.message);
+    txt.textContent = '失败：' + e.message;
+  } finally {
+    _batchSSE = null;
+    btn.disabled = false;
+    renderVoiceStats();
+  }
+}
+
+// ── 试听全部 ──────────────────────────────────────────────────
+let _playAllIdx = 0;
+let _playAllList = [];
+function playAllAudio() {
+  const doneLines = lines.filter(l => l.audio_status === 'done');
+  if (!doneLines.length) { toast('没有可试听的配音'); return; }
+  _playAllList = doneLines;
+  _playAllIdx = 0;
+  toast(`开始试听 ${doneLines.length} 条配音`);
+  _playNextInQueue();
+}
+
+function _playNextInQueue() {
+  if (_playAllIdx >= _playAllList.length) {
+    toast('试听完毕');
+    return;
+  }
+  const l = _playAllList[_playAllIdx];
+  const url = `/storage/${currentProjectId}/audio/${l.id}.mp3?t=${Date.now()}`;
+  if (_audioEl) { _audioEl.pause(); }
+  _audioEl = new Audio(url);
+  _audioEl.onended = () => {
+    _playAllIdx++;
+    _playNextInQueue();
+  };
+  _audioEl.onerror = () => {
+    toast(`试听失败：${l.speaker} 第 ${_playAllIdx + 1} 条`);
+    _playAllIdx++;
+    _playNextInQueue();
+  };
+  _audioEl.play().catch(e => {
+    toast('播放失败：' + e.message);
+  });
+}
+
+async function previewVoice(speaker) {
+  const v = voices[speaker];
+  if (!v?.voice_id) { toast('请先选择音色'); return; }
+  const btn = document.querySelector(`[data-preview="${speaker}"]`);
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    // 尝试获取该角色的默认 emotion
+    const speakerLines = lines.filter(l => l.speaker === speaker);
+    const defaultEmotion = speakerLines.find(l => l.emotion)?.emotion || null;
+    const res = await api('POST', '/api/tts/preview', {
+      text: `你好，这是${speaker}的试听音频。`,
+      voice_id: v.voice_id,
+      speed: v.speed || 0.95,
+      vol: v.vol || 1,
+      pitch: v.pitch || 0,
+      emotion: defaultEmotion,
+    });
+    playUrl(res.audio_url);
+  } catch (e) {
+    toast('试听失败：' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '试听'; }
+  }
+}
+
+// ── Video synthesis ───────────────────────────────────────────
+async function generateVideo() {
+  if (!lines.length) { toast('没有台词可以合成'); return; }
+  const pending = lines.filter(l => l.audio_status !== 'done');
+  if (pending.length) { toast(`还有 ${pending.length} 条台词未配音，请先完成配音`); return; }
+
+  const btn = document.getElementById('btn-video');
+  const statusEl = document.getElementById('video-status');
+  btn.disabled = true;
+  statusEl.style.display = '';
+  statusEl.textContent = '提交视频合成任务...';
+
+  try {
+    const res = await api('POST', `/api/video/projects/${currentProjectId}/render`);
+    videoJobId = res.job_id;
+    statusEl.textContent = `视频合成中 · 任务 ${videoJobId.slice(0,8)}...`;
+    pollVideoStatus();
+  } catch (e) {
+    toast('视频合成失败：' + e.message);
+    statusEl.textContent = '失败：' + e.message;
+    btn.disabled = false;
+  }
+}
+
+let _videoPoll = null;
+async function pollVideoStatus() {
+  if (!videoJobId || !currentProjectId) return;
+  const statusEl = document.getElementById('video-status');
+  const btn = document.getElementById('btn-video');
+  const dl = document.getElementById('download-link');
+
+  try {
+    const res = await api('GET', `/api/video/jobs/${videoJobId}`);
+    const statusMap = {
+      queued: '排队中...',
+      tts_pending: '等待 TTS...',
+      tts_done: 'TTS 完成，准备渲染...',
+      rendering: '正在渲染视频...',
+      done: '视频合成完成！',
+      error: '出错了：' + (res.error_msg || '未知错误'),
+    };
+    statusEl.textContent = statusMap[res.status] || res.status;
+
+    if (res.status === 'done') {
+      btn.disabled = false;
+      if (res.video_file) {
+        dl.href = res.video_file;
+        dl.style.display = 'inline-flex';
+        dl.textContent = '下载 MP4';
+      }
+      toast('视频合成完成！');
+      return;
+    } else if (res.status === 'error') {
+      btn.disabled = false;
+      return;
+    }
+  } catch (e) {
+    statusEl.textContent = '查询状态失败：' + e.message;
+  }
+
+  _videoPoll = setTimeout(pollVideoStatus, 3000);
+}
+
+// ── Export extras ─────────────────────────────────────────────
+function exportScript() {
+  if (!lines.length) { toast('没有台词可以导出'); return; }
+  const speakers = [...new Set(lines.map(l => l.speaker))];
+  const speakerTable = speakers.map(s => {
+    const v = voices[s] || {};
+    return `| ${s} | ${v.voice_id || '未配置'} | ${v.speed||0.95} | ${v.vol||1} | ${v.pitch||0} |`;
+  }).join('\n');
+
+  let md = `# ${escapeHtml(document.getElementById('topbar-title').textContent)}\n\n`;
+  md += `## 角色音色表\n\n`;
+  md += `| 角色 | voice_id | 语速 | 音量 | 声调 |\n`;
+  md += `|------|----------|------|------|------|\n`;
+  md += speakerTable + '\n\n';
+  md += `## 台词脚本\n\n`;
+  lines.forEach((l, i) => {
+    const emotionLabel = EMOTIONS.find(e => e.value === l.emotion)?.label || '';
+    const emotionTag = emotionLabel ? ` [${emotionLabel}]` : '';
+    md += `**${escapeHtml(l.speaker)}**${emotionTag}\n> ${escapeHtml(l.text_raw)}\n\n`;
+  });
+
+  const blob = new Blob([md], {type:'text/markdown'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${document.getElementById('topbar-title').textContent}_script.md`;
+  a.click();
+  toast('脚本已导出');
+}
+
+async function exportScreenshotCurrent() {
+  if (!currentProjectId) return;
+  if (!slides.length) { toast('没有卡片可截图'); return; }
+  loading(true, '生成当前卡片截图...');
+  try {
+    const res = await api('POST', `/api/screenshots/projects/${currentProjectId}/generate`, {
+      page: currentCard,
+      force: true,
+      ratio: 'xhs-3-4',
+    });
+    if (res.ok === false) throw new Error(res.detail || '截图失败');
+    toast(`第 ${res.page + 1} 张截图已生成`);
+    if (res.url) window.open(res.url, '_blank');
+  } catch (e) {
+    toast('截图失败：' + e.message);
+  }
+  loading(false);
+}
+
+async function exportScreenshotAll() {
+  if (!currentProjectId) return;
+  loading(true, '生成所有卡片截图...');
+  try {
+    const res = await api('POST', `/api/screenshots/projects/${currentProjectId}/generate`, {
+      force: true,
+      ratio: 'xhs-3-4',
+    });
+    if (res.ok === false) throw new Error(res.detail || '截图失败');
+    const urls = res.urls || [];
+    if (!urls.length) { toast('没有截图可显示'); return; }
+
+    // 打开一个汇总页面，避免浏览器拦截多个弹窗
+    const win = window.open('', '_blank');
+    if (!win) { toast('请允许弹窗，以便查看截图'); return; }
+
+    const imgsHtml = urls.map((url, i) =>
+      `<div style="margin-bottom:24px">
+        <div style="font-size:14px;color:#666;margin-bottom:8px">第 ${i + 1} 张 / 共 ${urls.length} 张</div>
+        <img src="${url}" style="max-width:100%;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.1)">
+        <a href="${url}" download="screenshot_${String(i+1).padStart(2,'0')}.png"
+           style="display:inline-block;margin-top:8px;padding:6px 14px;background:#1a1a1a;color:#fff;text-decoration:none;border-radius:6px;font-size:13px">
+          ⬇ 下载 PNG
+        </a>
+      </div>`
+    ).join('');
+
+    win.document.write(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>截图汇总</title>
+<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:0 auto;padding:24px;background:#f8f8f5}
+h1{font-size:20px;margin-bottom:20px}
+</style></head>
+<body>
+<h1>📷 已生成 ${urls.length} 张截图</h1>
+${imgsHtml}
+</body></html>`);
+    win.document.close();
+    toast(`已生成 ${res.count} 张截图，请在汇总页查看/下载`);
+  } catch (e) {
+    toast('截图失败：' + e.message);
+  }
+  loading(false);
+}
+
+async function clearProjectCache() {
+  if (!currentProjectId) return;
+  if (!confirm('确定清理项目临时缓存？\n这会删除视频合成中间文件和旧试听音频，但保留已生成的配音和截图。')) return;
+  loading(true, '清理缓存...');
+  try {
+    const res = await api('DELETE', `/api/tts/projects/${currentProjectId}/cache`);
+    toast(`清理完成，释放 ${formatBytes(res.freed_bytes)}`);
+  } catch (e) {
+    toast('清理失败：' + e.message);
+  }
+  loading(false);
+}
+
+function formatBytes(b) {
+  if (!b) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let i = 0;
+  while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
+  return b.toFixed(1) + ' ' + units[i];
+}
+
+// ── Screenshot Preview ────────────────────────────────────────
+let ssPreviewPage = 0;
+let ssPreviewTotal = 0;
+let ssPreviewDebounceTimer = null;
+let ssPreviewHtmlCache = null;
+
+function openScreenshotPreview() {
+  if (!currentProjectId) { toast('请先选择一个项目'); return; }
+  if (!slides.length) { toast('没有卡片可预览'); return; }
+  ssPreviewPage = currentCard;
+  ssPreviewTotal = slides.length;
+  document.getElementById('ss-preview-overlay').style.display = 'flex';
+  ssPreviewUpdatePageInfo();
+  ssPreviewRefresh();
+}
+
+function closeScreenshotPreview() {
+  document.getElementById('ss-preview-overlay').style.display = 'none';
+  ssPreviewHtmlCache = null;
+}
+
+function ssPreviewUpdatePageInfo() {
+  document.getElementById('ss-preview-page-info').textContent = `第 ${ssPreviewPage + 1} 张 / 共 ${ssPreviewTotal} 张`;
+}
+
+function ssPreviewPrev() {
+  if (ssPreviewPage > 0) { ssPreviewPage--; ssPreviewUpdatePageInfo(); ssPreviewRefresh(); }
+}
+
+function ssPreviewNext() {
+  if (ssPreviewPage < ssPreviewTotal - 1) { ssPreviewPage++; ssPreviewUpdatePageInfo(); ssPreviewRefresh(); }
+}
+
+async function ssPreviewRefresh() {
+  if (!currentProjectId) return;
+  try {
+    const ratio = document.getElementById('ss-preview-ratio').value;
+    const res = await api('POST', `/api/screenshots/projects/${currentProjectId}/preview-html`, {
+      page: ssPreviewPage,
+      ratio: ratio,
+    });
+    if (res.ok === false) throw new Error(res.detail || '预览失败');
+
+    ssPreviewHtmlCache = res.html;
+    ssPreviewTotal = res.total_pages;
+    ssPreviewUpdatePageInfo();
+
+    const frame = document.getElementById('ss-preview-frame');
+    const scaleWrap = document.getElementById('ss-preview-scale-wrap');
+    const wrap = document.getElementById('ss-preview-frame-wrap');
+
+    frame.style.width = res.width + 'px';
+    frame.style.height = res.height + 'px';
+
+    const blob = new Blob([res.html], {type: 'text/html; charset=utf-8'});
+    frame.src = URL.createObjectURL(blob);
+
+    frame.onload = function() {
+      const wrapW = wrap.clientWidth - 32;
+      const wrapH = wrap.clientHeight - 32;
+      const scaleX = wrapW / res.width;
+      const scaleY = wrapH / res.height;
+      const scale = Math.min(scaleX, scaleY, 1);
+      scaleWrap.style.transform = 'scale(' + scale + ')';
+      scaleWrap.style.width = res.width + 'px';
+      scaleWrap.style.height = res.height + 'px';
+    };
+  } catch (e) {
+    toast('预览失败：' + e.message);
+  }
+}
+
+async function ssPreviewGenerateCurrent() {
+  if (!currentProjectId || !ssPreviewHtmlCache) return;
+  loading(true, '生成当前页截图...');
+  try {
+    const ratio = document.getElementById('ss-preview-ratio').value;
+    const res = await api('POST', `/api/screenshots/projects/${currentProjectId}/generate`, {
+      page: ssPreviewPage,
+      force: true,
+      ratio: ratio,
+    });
+    if (res.ok === false) throw new Error(res.detail || '截图失败');
+    toast(`第 ${res.page + 1} 张截图已生成`);
+    if (res.url) window.open(res.url, '_blank');
+  } catch (e) {
+    toast('截图失败：' + e.message);
+  }
+  loading(false);
+}
+
+async function ssPreviewGenerateAll() {
+  if (!currentProjectId || !ssPreviewHtmlCache) return;
+  loading(true, '生成所有截图...');
+  try {
+    const ratio = document.getElementById('ss-preview-ratio').value;
+    const res = await api('POST', `/api/screenshots/projects/${currentProjectId}/generate`, {
+      force: true,
+      ratio: ratio,
+    });
+    if (res.ok === false) throw new Error(res.detail || '截图失败');
+    const urls = res.urls || [];
+    if (!urls.length) { toast('没有截图可显示'); return; }
+
+    const win = window.open('', '_blank');
+    if (!win) { toast('请允许弹窗，以便查看截图'); return; }
+
+    const imgsHtml = urls.map((url, i) =>
+      `<div style="margin-bottom:24px">
+        <div style="font-size:14px;color:#666;margin-bottom:8px">第 ${i + 1} 张 / 共 ${urls.length} 张</div>
+        <img src="${url}" style="max-width:100%;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.1)">
+        <a href="${url}" download="screenshot_${String(i+1).padStart(2,'0')}.png"
+           style="display:inline-block;margin-top:8px;padding:6px 14px;background:#1a1a1a;color:#fff;text-decoration:none;border-radius:6px;font-size:13px">
+          ⬇ 下载 PNG
+        </a>
+      </div>`
+    ).join('');
+
+    win.document.write(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>截图汇总</title>
+<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:0 auto;padding:24px;background:#f8f8f5}
+h1{font-size:20px;margin-bottom:20px}
+</style></head>
+<body>
+<h1>📷 已生成 ${urls.length} 张截图</h1>
+${imgsHtml}
+</body></html>`);
+    win.document.close();
+    toast(`已生成 ${res.count} 张截图，请在汇总页查看/下载`);
+  } catch (e) {
+    toast('截图失败：' + e.message);
+  }
+  loading(false);
+}
+
+function ssPreviewToggleGroup(el) {
+  el.parentElement.classList.toggle('collapsed');
+}
+
+// ── Resizer ───────────────────────────────────────────────────
+(function initResizers() {
+  const leftPane = document.getElementById('studio-left');
+  const rightPane = document.getElementById('studio-right');
+  const resizerLeft = document.getElementById('resizer-left');
+  const resizerRight = document.getElementById('resizer-right');
+  if (!leftPane || !rightPane || !resizerLeft || !resizerRight) return;
+
+  // 从 localStorage 恢复宽度
+  const savedLeft = localStorage.getItem('studio-left-width');
+  const savedRight = localStorage.getItem('studio-right-width');
+  if (savedLeft) leftPane.style.width = savedLeft + 'px';
+  if (savedRight) rightPane.style.width = savedRight + 'px';
+
+  function setupResize(resizer, pane, isLeft, minW, maxW) {
+    resizer.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      resizer.classList.add('resizing');
+      const startX = e.clientX;
+      const startWidth = pane.offsetWidth;
+
+      function onMove(e2) {
+        const dx = isLeft ? (e2.clientX - startX) : (startX - e2.clientX);
+        const newW = startWidth + (isLeft ? dx : -dx);
+        const clamped = Math.max(minW, Math.min(maxW, newW));
+        pane.style.width = clamped + 'px';
+      }
+      function onUp() {
+        resizer.classList.remove('resizing');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        // 保存宽度
+        const key = isLeft ? 'studio-left-width' : 'studio-right-width';
+        localStorage.setItem(key, pane.offsetWidth);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  setupResize(resizerLeft, leftPane, true, 280, 600);
+  setupResize(resizerRight, rightPane, false, 200, 420);
+})();
+
+// ── Init ──────────────────────────────────────────────────────
+document.getElementById('topbar-actions').style.display = 'none';
+loadProjects();
+</script>
+<!-- Screenshot Preview Panel -->
+<div class="ss-preview-overlay" id="ss-preview-overlay" style="display:none">
+  <div class="ss-preview-panel">
+    <div class="ss-preview-head">
+      <h3 style="font-size:15px;font-weight:500;margin:0">📷 截图预览</h3>
+      <button class="btn btn-sm" onclick="closeScreenshotPreview()" style="font-size:16px;padding:2px 8px">✕</button>
+    </div>
+    <div class="ss-preview-body">
+      <!-- Controls -->
+      <div class="ss-preview-controls" style="flex-shrink:0;padding:10px 16px">
+        <div class="ss-preview-row" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn btn-sm" onclick="ssPreviewPrev()">← 上一页</button>
+            <span id="ss-preview-page-info" style="font-size:13px;color:var(--t2)">第 1 张 / 共 1 张</span>
+            <button class="btn btn-sm" onclick="ssPreviewNext()">下一页 →</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <label class="ss-preview-label">平台比例</label>
+            <select class="ss-preview-select" id="ss-preview-ratio" onchange="ssPreviewRefresh()">
+              <option value="xhs-3-4">小红书 3:4</option>
+              <option value="video-9-16">视频号 9:16</option>
+              <option value="square-1-1">正方形 1:1</option>
+              <option value="landscape-16-9">横屏 16:9</option>
+            </select>
+          </div>
+        </div>
+        <div class="ss-preview-row" style="margin-top:8px">
+          <button class="btn btn-sm" onclick="ssPreviewGenerateCurrent()">📄 生成本页</button>
+          <button class="btn btn-sm" onclick="ssPreviewGenerateAll()">🖼 生成全部</button>
+        </div>
+      </div>
+      <!-- Preview iframe -->
+      <div class="ss-preview-frame-wrap" id="ss-preview-frame-wrap">
+        <div class="ss-preview-scale-wrap" id="ss-preview-scale-wrap">
+          <iframe class="ss-preview-frame" id="ss-preview-frame" sandbox="allow-same-origin"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

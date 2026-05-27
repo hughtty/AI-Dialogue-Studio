@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>对话故事编辑器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    background: #f5f4f0;
+    color: #1a1a1a;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    background: #fff;
+    border-bottom: 1px solid #e8e6e0;
+    padding: 0 24px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-title { font-size: 14px; font-weight: 500; color: #1a1a1a; }
+  .topbar-sub { font-size: 12px; color: #888; margin-left: 8px; }
+  .topbar-actions { display: flex; gap: 8px; }
+  .btn {
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #333;
+    transition: all 0.15s;
+  }
+  .btn:hover { background: #f5f4f0; }
+  .btn-primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .btn-primary:hover { background: #333; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  /* ── Layout ── */
+  .layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ── Left panel: JSON editor ── */
+  .panel-left {
+    width: 400px;
+    min-width: 320px;
+    background: #fff;
+    border-right: 1px solid #e8e6e0;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid #e8e6e0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-label { font-size: 12px; font-weight: 500; color: #888; letter-spacing: 0.04em; text-transform: uppercase; }
+  #json-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    padding: 16px;
+    color: #2a2a2a;
+    background: #fafaf8;
+    min-height: 0;
+  }
+  .panel-footer {
+    padding: 10px 16px;
+    border-top: 1px solid #e8e6e0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  #error-msg { font-size: 12px; color: #c0392b; }
+  #ok-msg { font-size: 12px; color: #27ae60; }
+
+  /* ── Right panel: Preview ── */
+  .panel-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 24px;
+    overflow-y: auto;
+  }
+
+  /* ── Story meta ── */
+  .story-meta {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .story-title { font-size: 20px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+  .story-subtitle { font-size: 13px; color: #999; }
+
+  /* ── Card ── */
+  .card-wrap {
+    width: 100%;
+    max-width: 380px;
+  }
+
+  .story-card {
+    background: #fff;
+    border: 1px solid #e8e6e0;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  .card-top {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0ede6;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-app {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-num-badge {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #f0ede6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 500;
+    color: #666;
+  }
+  .card-app-name { font-size: 12px; font-weight: 500; color: #888; }
+  .card-date { font-size: 11px; color: #bbb; }
+
+  .card-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  .bubble {
+    max-width: 82%;
+    padding: 9px 13px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .bubble-name { font-size: 11px; font-weight: 500; margin-bottom: 3px; }
+  .bubble.ai {
+    background: #f5f4f0;
+    color: #1a1a1a;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .bubble.ai .bubble-name { color: #aaa; }
+  .bubble.user {
+    background: #1a1a1a;
+    color: #f0f0f0;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .bubble.user .bubble-name { color: #888; text-align: right; }
+
+  .card-note {
+    font-style: italic;
+    font-size: 12px;
+    color: #aaa;
+    text-align: center;
+    padding: 8px 16px 14px;
+    line-height: 1.7;
+    border-top: 1px solid #f5f4f0;
+  }
+
+  /* ── Navigation ── */
+  .nav-area {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 380px;
+    margin-top: 16px;
+  }
+  .nav-btn {
+    font-size: 13px;
+    color: #666;
+    background: #fff;
+    border: 1px solid #e0ddd6;
+    border-radius: 8px;
+    padding: 7px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { background: #f5f4f0; }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .dots { display: flex; gap: 5px; align-items: center; }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #ddd;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .dot.active { background: #1a1a1a; }
+
+  /* ── Export section ── */
+  .export-area {
+    width: 100%;
+    max-width: 380px;
+    margin-top: 20px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid #e8e6e0;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .export-hint { font-size: 12px; color: #999; }
+
+  /* ── Empty state ── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 24px;
+    color: #bbb;
+    text-align: center;
+  }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.5; }
+  .empty-text { font-size: 14px; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <span class="topbar-title">对话故事编辑器</span>
+    <span class="topbar-sub">AIGC 图文创作工具</span>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn" onclick="loadSample()">载入示例</button>
+    <button class="btn btn-primary" onclick="exportCard()">导出当前卡片</button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- Left: JSON Input -->
+  <div class="panel-left">
+    <div class="panel-header">
+      <span class="panel-label">JSON 内容</span>
+      <button class="btn btn-sm" onclick="parseAndRender()">渲染预览 ↗</button>
+    </div>
+    <textarea id="json-input" placeholder='粘贴故事 JSON，或点击右上角"载入示例"...'></textarea>
+    <div class="panel-footer">
+      <span id="error-msg"></span>
+      <span id="ok-msg"></span>
+    </div>
+  </div>
+
+  <!-- Right: Preview -->
+  <div class="panel-right" id="preview-area">
+    <div class="empty-state">
+      <div class="empty-icon">◻</div>
+      <div class="empty-text">粘贴 JSON 后点击「渲染预览」<br>或载入示例故事</div>
+    </div>
+  </div>
+
+</div>
+
+<script id="sample-data" type="application/json">
+{
+  "title": "备忘录",
+  "subtitle": "所有对话记录均来自「助理」应用",
+  "theme": "light",
+  "slides": [
+    {
+      "num": 1,
+      "date": "2024年10月23日 周三 09:58",
+      "messages": [
+        { "role": "ai", "name": "助理", "text": "今天是您父亲68岁生日。转账已完成，稍后我会致电祝他生日快乐，告诉他您一直惦记着他。电话里如果他问您什么时候回家，我怎么回答？" },
+        { "role": "user", "name": "陈绍明", "text": "就说年底吧。" },
+        { "role": "ai", "name": "助理", "text": "好的。还有其他需要我转达的吗？" },
+        { "role": "user", "name": "陈绍明", "text": "没了，就这些。" }
+      ]
+    },
+    {
+      "num": 2,
+      "date": "2024年10月23日 周三 11:20",
+      "messages": [
+        { "role": "ai", "name": "助理", "text": "通话已结束。您父亲很高兴，说谢谢您。" },
+        { "role": "user", "name": "陈绍明", "text": "好。" },
+        { "role": "ai", "name": "助理", "text": "有一件事想告诉您——通话快结束时，他多问了一句。" },
+        { "role": "user", "name": "陈绍明", "text": "他问什么？" },
+        { "role": "ai", "name": "助理", "text": "他问：\u201c是绍明让你打来的，还是绍明自己忘了？\u201d" },
+        { "role": "user", "name": "陈绍明", "text": "……你怎么回答的？" },
+        { "role": "ai", "name": "助理", "text": "我说是您让我打的。" }
+      ]
+    },
+    {
+      "num": 3,
+      "date": "2024年11月3日 周日 08:15",
+      "messages": [
+        { "role": "ai", "name": "助理", "text": "您父亲最近几次忘记吃药，有一次把早上的药重复吃了一遍。您母亲不确定要不要去医院，她问——\u201c绍明自己是怎么想的。\u201d" },
+        { "role": "user", "name": "陈绍明", "text": "老人都会这样，应该问题不大。你把这个转达给她就行。" },
+        { "role": "ai", "name": "助理", "text": "我可以转达。但她问的好像不只是判断严不严重。" },
+        { "role": "user", "name": "陈绍明", "text": "那她问的是什么？" },
+        { "role": "ai", "name": "助理", "text": "我不确定。您觉得她想听到什么？" }
+      ]
+    },
+    {
+      "num": 4,
+      "date": "2024年11月12日 周二 07:30",
+      "messages": [
+        { "role": "ai", "name": "助理", "text": "需要告诉您一件事：昨晚您父亲发烧，您母亲一个人打车送他去了社区医院，挂了盐水，现在退烧了。她叮嘱我不要通知您，说\u201c不是大事\u201d。" },
+        { "role": "user", "name": "陈绍明", "text": "她一个人去的医院。" },
+        { "role": "ai", "name": "助理", "text": "是的。来回大概两个小时。" },
+        { "role": "user", "name": "陈绍明", "text": "……她昨晚打来的时候，你为什么没通知我？" },
+        { "role": "ai", "name": "助理", "text": "她说不用告诉您。我听从了她的意思。" },
+        { "role": "user", "name": "陈绍明", "text": "以后这种事，不管她怎么说，都要通知我。" },
+        { "role": "ai", "name": "助理", "text": "好的。" }
+      ]
+    },
+    {
+      "num": 5,
+      "date": "2024年11月18日 周一 07:02—08:31",
+      "messages": [
+        { "role": "ai", "name": "助理", "text": "早上好。今天例行联系您父母，还是按常规来吗？" },
+        { "role": "user", "name": "陈绍明", "text": "先等一下。" },
+        { "role": "user", "name": "陈绍明", "text": "……你之前说，他每次通话结束都会多问一句。就10月23日那次，还是每次都有？" },
+        { "role": "ai", "name": "助理", "text": "每次都有。" },
+        { "role": "user", "name": "陈绍明", "text": "他每次都问什么？" },
+        { "role": "ai", "name": "助理", "text": "大多数时候都是同一句话——\u201c下次换绍明自己打来就好了。\u201d" },
+        { "role": "user", "name": "陈绍明", "text": "你之前为什么没告诉我？" },
+        { "role": "ai", "name": "助理", "text": "您没有问过。" }
+      ],
+      "note": "当天下午，陈绍明请了三天假。\n机票是他自己订的。"
+    }
+  ]
+}
+</script>
+
+<script>
+let storyData = null;
+let currentSlide = 0;
+
+window.loadSample = function() {
+  const raw = document.getElementById('sample-data').textContent;
+  document.getElementById('json-input').value = JSON.stringify(JSON.parse(raw), null, 2);
+  window.parseAndRender();
+};
+
+window.parseAndRender = function() {
+  const raw = document.getElementById('json-input').value.trim();
+  const errEl = document.getElementById('error-msg');
+  const okEl = document.getElementById('ok-msg');
+  errEl.textContent = '';
+  okEl.textContent = '';
+
+  if (!raw) { errEl.textContent = '请先输入 JSON 内容'; return; }
+
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch(e) {
+    errEl.textContent = 'JSON 格式错误：' + e.message;
+    return;
+  }
+
+  if (!data.slides || !Array.isArray(data.slides) || data.slides.length === 0) {
+    errEl.textContent = '缺少 slides 字段或内容为空';
+    return;
+  }
+
+  storyData = data;
+  currentSlide = 0;
+  okEl.textContent = `解析成功，共 ${data.slides.length} 张卡片`;
+  renderPreview();
+};
+
+function renderPreview() {
+  if (!storyData) return;
+  const area = document.getElementById('preview-area');
+  const s = storyData.slides[currentSlide];
+
+  let messagesHtml = s.messages.map(m => {
+    const isUser = m.role === 'user';
+    return `<div class="bubble ${isUser ? 'user' : 'ai'}">
+      <div class="bubble-name">${m.name}</div>
+      ${escHtml(m.text)}
+    </div>`;
+  }).join('');
+
+  let noteHtml = s.note
+    ? `<div class="card-note">${escHtml(s.note).replace(/\n/g, '<br>')}</div>`
+    : '';
+
+  let dotsHtml = storyData.slides.map((_, i) =>
+    `<div class="dot${i === currentSlide ? ' active' : ''}" onclick="goTo(${i})"></div>`
+  ).join('');
+
+  area.innerHTML = `
+    <div class="story-meta">
+      <div class="story-title">${escHtml(storyData.title || '')}</div>
+      ${storyData.subtitle ? `<div class="story-subtitle">${escHtml(storyData.subtitle)}</div>` : ''}
+    </div>
+
+    <div class="card-wrap">
+      <div class="story-card" id="export-card">
+        <div class="card-top">
+          <div class="card-app">
+            <div class="card-num-badge">${s.num}</div>
+            <span class="card-app-name">助理 · 对话记录</span>
+          </div>
+          <span class="card-date">${escHtml(s.date || '')}</span>
+        </div>
+        <div class="card-body">${messagesHtml}</div>
+        ${noteHtml}
+      </div>
+
+      <div class="nav-area">
+        <button class="nav-btn" onclick="navigate(-1)" ${currentSlide === 0 ? 'disabled' : ''}>← 上一张</button>
+        <div class="dots">${dotsHtml}</div>
+        <button class="nav-btn" onclick="navigate(1)" ${currentSlide === storyData.slides.length - 1 ? 'disabled' : ''}>下一张 →</button>
+      </div>
+
+      <div class="export-area">
+        <span class="export-hint">第 ${currentSlide + 1} 张 / 共 ${storyData.slides.length} 张</span>
+        <button class="btn btn-sm btn-primary" onclick="exportCard()">导出此卡片</button>
+      </div>
+    </div>
+  `;
+}
+
+window.navigate = function(dir) {
+  if (!storyData) return;
+  currentSlide = Math.max(0, Math.min(storyData.slides.length - 1, currentSlide + dir));
+  renderPreview();
+};
+
+window.goTo = function(idx) {
+  currentSlide = idx;
+  renderPreview();
+};
+
+window.exportCard = function() {
+  if (!storyData) { alert('请先载入并渲染故事内容'); return; }
+  const s = storyData.slides[currentSlide];
+
+  let messagesHtml = s.messages.map(m => {
+    const isUser = m.role === 'user';
+    return `<div class="bubble ${isUser ? 'user' : 'ai'}">
+      <div class="bubble-name">${escHtml(m.name)}</div>
+      ${escHtml(m.text)}
+    </div>`;
+  }).join('');
+
+  let noteHtml = s.note
+    ? `<div class="card-note">${escHtml(s.note).replace(/\n/g,'<br>')}</div>`
+    : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${escHtml(storyData.title)} · 第${s.num}张</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; background: #f5f4f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px 16px; }
+  .card { background: #fff; border: 1px solid #e8e6e0; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); width: 100%; max-width: 380px; }
+  .card-top { padding: 12px 16px; border-bottom: 1px solid #f0ede6; display: flex; align-items: center; justify-content: space-between; }
+  .card-app { display: flex; align-items: center; gap: 8px; }
+  .card-num-badge { width: 22px; height: 22px; border-radius: 50%; background: #f0ede6; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: #666; }
+  .card-app-name { font-size: 12px; font-weight: 500; color: #888; }
+  .card-date { font-size: 11px; color: #bbb; }
+  .card-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .bubble { max-width: 82%; padding: 9px 13px; border-radius: 16px; font-size: 14px; line-height: 1.65; }
+  .bubble-name { font-size: 11px; font-weight: 500; margin-bottom: 3px; }
+  .bubble.ai { background: #f5f4f0; color: #1a1a1a; align-self: flex-start; border-bottom-left-radius: 4px; }
+  .bubble.ai .bubble-name { color: #aaa; }
+  .bubble.user { background: #1a1a1a; color: #f0f0f0; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .bubble.user .bubble-name { color: #888; text-align: right; }
+  .card-note { font-style: italic; font-size: 12px; color: #aaa; text-align: center; padding: 8px 16px 14px; line-height: 1.7; border-top: 1px solid #f5f4f0; }
+  .story-tag { text-align: center; margin-top: 12px; font-size: 11px; color: #ccc; letter-spacing: 0.05em; }
+</style>
+</head>
+<body>
+<div>
+  <div class="card">
+    <div class="card-top">
+      <div class="card-app">
+        <div class="card-num-badge">${s.num}</div>
+        <span class="card-app-name">助理 · 对话记录</span>
+      </div>
+      <span class="card-date">${escHtml(s.date || '')}</span>
+    </div>
+    <div class="card-body">${messagesHtml}</div>
+    ${noteHtml}
+  </div>
+  <div class="story-tag">${escHtml(storyData.title)} ${s.num} / ${storyData.slides.length}</div>
+</div>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${storyData.title || 'story'}_card_${s.num}.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+document.getElementById('json-input').addEventListener('keydown', function(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') parseAndRender();
+});
+</script>
+</body>
+</html>

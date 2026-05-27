@@ -1,0 +1,14 @@
+# speaker → MiniMax voice_id 映射
+# 缺失的角色会让 audio 步骤直接报错退出
+# 在 https://platform.minimaxi.com 找音色 ID
+
+助理: female-tianmei
+旁白: male-qn-qingse
+陈绍明: male-qn-jingying
+周建平: male-qn-jingying
+
+# 默认参数（可被每条覆盖）
+_defaults:
+  speed: 0.95
+  vol: 1.0
+  pitch: 0

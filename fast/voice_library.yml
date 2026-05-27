@@ -1,0 +1,115 @@
+# MiniMax 中文精选音色库
+# 适合"治愈向 / 陪伴感 / AI与人类关系"主题短故事
+#
+# 使用规则：
+# 1. 每个角色从对应分类中选一个最贴合的 voice_id
+# 2. default_emotion 是角色基调，单条 message 可覆盖
+# 3. speech-2.8-hd 支持的 emotion: calm, happy, sad, angry, fearful, disgusted, surprised
+
+ai_assistant:
+  - voice_id: "Chinese (Mandarin)_Warm_Girl"
+    name: "温暖少女"
+    gender: female
+    style: "温暖、克制、有陪伴感，适合女性AI助理"
+  - voice_id: "Chinese (Mandarin)_Gentle_Youth"
+    name: "温润青年"
+    gender: male
+    style: "温润、理性、不打扰，适合男性AI助理"
+  - voice_id: "Chinese (Mandarin)_Crisp_Girl"
+    name: "清脆少女"
+    gender: female
+    style: "清脆、精准、略带疏离感，适合高冷的AI"
+  - voice_id: "Robot_Armor"
+    name: "机械战甲"
+    gender: neutral
+    style: "明显的机械质感，适合强调AI非人特质"
+
+middle_aged_man:
+  - voice_id: "Chinese (Mandarin)_Sincere_Adult"
+    name: "真诚青年"
+    gender: male
+    style: "真诚、略带疲惫，适合在外打拼的中年男性"
+  - voice_id: "Chinese (Mandarin)_Gentleman"
+    name: "温润男声"
+    gender: male
+    style: "温润、成熟、有故事感，适合内敛的中年男性"
+  - voice_id: "Chinese (Mandarin)_Radio_Host"
+    name: "电台男主播"
+    gender: male
+    style: "低沉、有磁性、深夜感，适合孤独感场景"
+  - voice_id: "Chinese (Mandarin)_Lyrical_Voice"
+    name: "抒情男声"
+    gender: male
+    style: "抒情、内敛、情绪丰富，适合情感波动大的角色"
+
+middle_aged_woman:
+  - voice_id: "Chinese (Mandarin)_Wise_Women"
+    name: "阅历姐姐"
+    gender: female
+    style: "成熟、有阅历、淡然，适合经历丰富的女性"
+  - voice_id: "Chinese (Mandarin)_Soft_Girl"
+    name: "柔和少女"
+    gender: female
+    style: "柔和、安静、不张扬，适合温柔但疲惫的女性"
+
+youth:
+  - voice_id: "Chinese (Mandarin)_Pure-hearted_Boy"
+    name: "清澈邻家弟弟"
+    gender: male
+    style: "清澈、年轻、没有社会打磨感"
+  - voice_id: "chunzhen_xuedi"
+    name: "纯真学弟"
+    gender: male
+    style: "纯真、青涩、学生气"
+  - voice_id: "junlang_nanyou"
+    name: "俊朗男友"
+    gender: male
+    style: "俊朗、阳光、有男友感"
+  - voice_id: "Chinese (Mandarin)_Warm_Girl"
+    name: "温暖少女"
+    gender: female
+    style: "温暖、治愈、年轻"
+
+elder:
+  - voice_id: "Chinese (Mandarin)_Kind-hearted_Elder"
+    name: "花甲奶奶"
+    gender: female
+    style: "慈祥、年迈、有岁月感"
+  - voice_id: "Chinese (Mandarin)_Humorous_Elder"
+    name: "搞笑大爷"
+    gender: male
+    style: "幽默、爽朗、市井气"
+
+special:
+  - voice_id: "Chinese (Mandarin)_Unrestrained_Young_Man"
+    name: "不羁青年"
+    gender: male
+    style: "不羁、叛逆、有锋芒"
+  - voice_id: "Chinese (Mandarin)_HK_Flight_Attendant"
+    name: "港普空姐"
+    gender: female
+    style: "港普口音、职业感、有辨识度"
+
+# 情绪参数（speech-2.8-hd 支持）
+emotions:
+  calm: "中性/平静，日常对话默认"
+  happy: "高兴、轻松"
+  sad: "悲伤、低落、疲惫"
+  angry: "愤怒、不满"
+  fearful: "害怕、担忧"
+  disgusted: "厌恶、嫌弃"
+  surprised: "惊讶、意外"
+
+# 语气词标签（直接在文本中插入，speech-2.8-hd 原生支持）
+sound_tags:
+  breath: "正常换气，让语句有呼吸感"
+  sighs: "叹气，适合疲惫、无奈的场景"
+  laughs: "笑声，适合轻松或自嘲"
+  chuckles: "轻笑，比 laughs 更克制"
+  gasps: "倒吸气，适合惊讶或紧张"
+  inhales: "吸气，说话前的准备感"
+  exhales: "呼气，放松或放弃"
+  emm: "嗯，犹豫或思考"
+
+# 停顿标签（<#x#>，x 为秒数，0.01-99.99）
+# 用于控制说话节奏，避免机关枪式连读
