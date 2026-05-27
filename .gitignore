@@ -34,3 +34,14 @@ Thumbs.db
 
 # Screenshots (dev only)
 PixPin_*.png
+
+# IDE / Agent configs
+.trae/
+.claude/
+skills/
+
+# Dev artifacts
+mnt/
+*.html
+!backend/static/index.html
+calls_studio_app.py
