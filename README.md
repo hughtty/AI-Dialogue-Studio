@@ -2,6 +2,8 @@
 
 AI 对话体短故事创作平台 —— 给一个主题，自动生成对话故事、手机聊天卡片、竖屏短视频。
 
+![Dialogue Studio](docs/images/hero.png)
+
 ## 产物
 
 | 产物 | 格式 | 说明 |
@@ -19,12 +21,13 @@ AI 对话体短故事创作平台 —— 给一个主题，自动生成对话故
 
 两条线完全隔离，不互相 import。
 
+## 系统架构
+
+![系统架构](docs/images/architecture.png)
+
 ## 技术栈
 
-- **Python 3.12** / FastAPI / SQLAlchemy 2.x / SQLite
-- **Kimi K2.6**（Moonshot）— 故事生成，兼容 OpenAI SDK
-- **MiniMax** — TTS 配音（`speech-2.8-hd`）
-- **HyperFrames** — HTML composition → MP4 渲染
+![技术栈](docs/images/tech-stack.png)
 
 ## 快速开始
 
@@ -64,6 +67,8 @@ uvicorn backend.main:app --reload
 功能：项目管理 → 故事生成 → 台词编辑 → 音色配置 → 批量配音 → 视频导出
 
 ### 方式二：命令行一键出片（fast）
+
+![工作流](docs/images/workflow.png)
 
 ```bash
 # 一把梭：故事 → 配音 → 视频
